@@ -10,11 +10,12 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <libgen.h> 
+#include <unistd.h>
 
 //fileclient ip_of_fileserver port_to_connect file_to_send
 int main(int argc, char *argv[]){
 	int sockfd, portnum, s, flen, size;
-	char *server_ip, *file_addr, *file_name;
+	char *server_ip, *file_addr, *filename;
 	struct sockaddr_in serv_addr;
 	FILE *fp;
 
@@ -34,6 +35,7 @@ int main(int argc, char *argv[]){
         fprintf(stderr,"ERROR opening socket");
         exit(0);
     }
+    printf("sending file %s to %s\n",file_addr,server_ip);
 	//fill in the socket
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
@@ -52,14 +54,16 @@ int main(int argc, char *argv[]){
         exit(0);
     }
     else{
-    	printf("connected to the server");
+    	printf("connected to %s on tcp %d\n", server_ip, portnum);
     }
     //open the file
     fp = fopen(file_addr, "rb");
     if(fp == NULL){
-    	fprintf(stderr, "ERROR opening the file");
+    	printf("can't open file %s\n", file_addr);
         exit(0);
     }
+    else
+    	printf("opened file %s\n", file_addr);
     //get file size
 	fseek(fp, 0L, SEEK_END);
 	size = ftell(fp);
@@ -71,8 +75,13 @@ int main(int argc, char *argv[]){
     write(sockfd, &flen, sizeof(int));
     write(sockfd, filename, flen);
     //send the file
-    sendfile(sockfd, fp, size);
+    printf("start sending file\n");
+    int fd = fileno(fp);
+    sendfile(sockfd, fd, NULL, size);
+    printf("finish sending file\n");
+    printf("closing file %s\n", file_addr);
     fclose(fp);
+    printf("closing socket\n");
     close(sockfd);
 
     return 0;
